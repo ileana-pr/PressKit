@@ -1,27 +1,32 @@
-# Script IDs (for clasp push)
+# Script IDs (for Clasp Developer Setup)
 
-**Use the Apps Script project ID (script ID), not the spreadsheet ID.**  
-For a form response sheet: open that sheet → **Extensions → Apps Script** → in the script editor click the **gear (Project settings)** → copy **Script ID**. That is the value to put in `.clasp.json` as `scriptId`. If you use the spreadsheet ID (from the sheet URL) by mistake, clasp may push to the wrong project and you won’t see the files when you open the sheet’s Apps Script.
-
-To push: set `scriptId` in `.clasp.json` to the project you want, then run `clasp push`.
-
-- **Task tracker**: `1c62gNBOFxaFJR8m1AxQtemtd9RDmm65OIazwM0zi0OUktUznk9tQi6ie`
-- **Member Spotlight** (form response sheet): `1-NJpbMgjVhbAHQNwrJH3y5GnyeUdeKzZpP1n_b1f4DlA1LKrhcI2a8fN`
-- **Event Recap**: `1MW7BZoJBT5dphsS2t9jlGaTRyWpSJt3tISvbP0dVfdVSUjrJaS9w_YPQ`
-- **Newsletter Submission**: `1xfuKp515wHMizXyBGcDJWtovSScCOVoi5KayR5VPN8H1KHjGRhNw7dF7`
-- **Partnerships**: `1G7M8aDdZLKPrsDOVqWYB_G3O6VzM9T5zuogqhC6TqLjjLS4M8k2JxmsA`
-
-Same codebase; change the ID in `.clasp.json` and push to whichever project you’re updating.
+With the **Consolidated Form** update, you no longer need to manage and deploy to multiple separate form response sheet script IDs! There is now only **one script project** attached to your single consolidated form response sheet.
 
 ---
 
-**When pushing to a form response sheet**, also set in [Config.gs](Config.gs) for that form:
+## 🛠️ How to Find Your Script ID
 
-| Form | `CURRENT_FORM_ARTICLE_TYPE` | `CURRENT_FORM_TASK_PREFIX` |
-|------|-----------------------------|----------------------------|
-| Member Spotlight | `'Member Spotlight'` | `'Member Spotlight'` |
-| Event Recap | `'Event Recap'` | `'Event Recap'` |
-| Newsletter Submission | `'Newsletter Submission'` | `'Newsletter Submission'` |
-| Partnerships | `'Partnerships Announcement'` | `'Partnerships'` |
+**IMPORTANT:** Always use the **Apps Script Project ID (Script ID)** in clasp, *not* the Google Sheet spreadsheet ID.
 
-Those values set the task row label and the "From form: …" note. Optionally set `DOC_TITLE_PREFIX` (e.g. `'Member Spotlight - '`) if you want it in the draft Doc file name.
+1. Open your **consolidated form response spreadsheet** in your browser.
+2. Go to the top menu and select **Extensions ➔ Apps Script**.
+3. In the left-hand sidebar of the Apps Script editor, click the **Project Settings (gear icon)**.
+4. Copy the **Script ID** (under the "IDs" section).
+5. Open your local project, go to `google-apps-script/.clasp.json`, and replace the `scriptId` value with your copied ID:
+   ```json
+   {
+     "scriptId": "YOUR_COPIED_SCRIPT_ID"
+   }
+   ```
+6. Now you can run `clasp push` from the root of the repository to deploy all script files directly into the sheet's Apps Script project!
+
+---
+
+## 🔄 Automated Universal Mapping
+
+The pipeline now automatically maps and formats all incoming community submissions, generating Google Doc drafts and logging them directly inside the same response spreadsheet:
+
+| Submission Field | Script Action | Logged Tab Location |
+| :--- | :--- | :--- |
+| **Name / Summary Column** | Auto-identified and truncated to neat length | `'Drafts Log'` tab (`Date`, `Draft Title`, `Google Doc Link`) |
+| **All Generic Q&A Fields** | Formatted into a clean structured block for Gemini | Logged as deliverables in spreadsheet |

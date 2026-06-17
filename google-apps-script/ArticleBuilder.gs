@@ -5,12 +5,19 @@ function _normalizeHeader(h) {
 function _isTitleHeader(header) {
   var n = _normalizeHeader(header);
   if (!n) return false;
-  return n === 'headline/title' || n === 'headline' || n === 'title' || n === 'member name' || n.indexOf('headline') !== -1 || n.indexOf('member name') !== -1;
+  return (
+    n.indexOf('headline') !== -1 ||
+    n.indexOf('title') !== -1 ||
+    n.indexOf('subject') !== -1 ||
+    n.indexOf('summary') !== -1 ||
+    n.indexOf('your name') !== -1 ||
+    n === 'name'
+  );
 }
 
 /**
  * Builds article text from one form response. Output is Q/A format.
- * Title is taken from a column headed "Headline/Title" or "Member Name" (or "Headline", "Title"), else first short value.
+ * Title is taken from a column containing title keywords, else first short value.
  *
  * @param {Array} values - new row from e.values
  * @param {Array} headers - header row (same length as values)
@@ -40,7 +47,18 @@ function buildArticleFromResponse(values, headers) {
   }
 
   var body = qaBlocks.join('\n\n');
-  if (!title) title = 'Article draft';
+  if (!title) {
+    title = Config.DEFAULT_TITLE || 'Article draft';
+  } else if (title.length > 60) {
+    // Truncate at a space boundary for neatness
+    var truncated = title.substring(0, 60);
+    var lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > 40) {
+      title = truncated.substring(0, lastSpace).trim() + '...';
+    } else {
+      title = truncated.trim() + '...';
+    }
+  }
   return { title: title, body: body };
 }
 

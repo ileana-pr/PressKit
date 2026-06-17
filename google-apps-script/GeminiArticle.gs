@@ -20,11 +20,12 @@ function generateArticleFromQa(qaText, articleType) {
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent';
   Logger.log('GeminiArticle: calling ' + model + ' with Q/A length ' + (qaText ? qaText.length : 0));
 
-  var prompt = 'You are writing a newsletter article for Substack. Below is a Q&A from a form submission.'
-    + ' Turn it into a polished, readable article suitable for publishing.'
-    + ' Article type: ' + (articleType || 'general') + '.'
-    + ' Write in a warm, professional tone. Use the answers to build the narrative; do not repeat "Q:" and "A:" in the article.'
-    + ' Output only the article body (no title, no labels). Use paragraphs and line breaks where appropriate.\n\n'
+  var prompt = 'You are a professional newsletter writer and editor.\n'
+    + 'Below is a form submission with raw details and responses.\n'
+    + 'Analyze the details: if it highlights a person (e.g. name, role, background), write it as an engaging community feature / spotlight; if it describes an event, project milestone, launch, or partnership, write it as an exciting announcement or recap.\n'
+    + 'Turn this raw information into a beautifully polished, highly engaging newsletter article suitable for publishing (e.g. on Substack).\n'
+    + 'Write in a warm, professional, and appealing tone. Use the answers to build the narrative organically; do not repeat the "Q:" and "A:" labels, template references, or consent checkboxes in the finished article.\n'
+    + 'Output only the finished article body (no title, no labels). Use clean paragraph breaks where appropriate.\n\n'
     + qaText;
 
   var payload = {

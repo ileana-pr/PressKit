@@ -1,7 +1,7 @@
 /**
  * Test: run the pipeline using the last filled row in the active sheet.
  * Open the form response sheet, run this from the script editor (Run → testWithLastResponse).
- * Creates a Doc and adds a task row using that row's data.
+ * Creates a Doc and adds a row to the log tab using that row's data.
  */
 function testWithLastResponse() {
   Logger.log('testWithLastResponse: starting');
@@ -22,21 +22,20 @@ function testWithLastResponse() {
       SpreadsheetApp.getActiveSpreadsheet().toast('No article content from that row.');
       return;
     }
+
     Logger.log('testWithLastResponse: creating Q&A doc');
     var qaDocUrl = createArticleDoc(article.title, article.body, ' - Q&A');
     Logger.log('testWithLastResponse: calling Gemini for article...');
-    var aiBody = generateArticleFromQa(article.body, Config.CURRENT_FORM_ARTICLE_TYPE);
+    var aiBody = generateArticleFromQa(article.body, 'General Submission');
     var draftBody = aiBody || article.body;
     Logger.log('testWithLastResponse: creating draft doc');
     var docUrl = createArticleDoc(article.title, draftBody, '');
     Logger.log('Doc created (draft): ' + docUrl + '; Q&A: ' + qaDocUrl);
-    var articleType = Config.CURRENT_FORM_ARTICLE_TYPE || 'Member Spotlight';
-    var prefix = Config.CURRENT_FORM_TASK_PREFIX || 'Member Spotlight';
-    var taskTitle = prefix + ': ' + (article.title || 'Draft');
-    Logger.log('testWithLastResponse: appending task to tracker');
-    var appendedRow = appendArticleTask(articleType, taskTitle, docUrl, '');
-    Logger.log('testWithLastResponse: task appended at row ' + appendedRow);
-    SpreadsheetApp.getActiveSpreadsheet().toast('Q&A and draft docs created; task added. Check Drafts folder and task sheet.');
+    
+    Logger.log('testWithLastResponse: logging draft details to sheet');
+    var appendedRow = logDraftToSheet(article.title, docUrl);
+    Logger.log('testWithLastResponse: draft logged at row ' + appendedRow);
+    SpreadsheetApp.getActiveSpreadsheet().toast('Draft doc created and logged. Check Drive and the "Drafts Log" tab.');
   } catch (err) {
     Logger.log('testWithLastResponse ERROR: ' + err.message);
     Logger.log(err.stack || err.toString());
@@ -46,7 +45,7 @@ function testWithLastResponse() {
 
 /**
  * Runs when a new form response is submitted (install "On form submit" trigger).
- * Builds article from response, creates a Doc, appends task to the newsletter crew sheet.
+ * Builds article from response, creates a Doc, logs draft info to the drafts sheet.
  * For manual testing, use testWithLastResponse() instead.
  */
 function onFormSubmit(e) {
@@ -66,21 +65,18 @@ function onFormSubmit(e) {
       SpreadsheetApp.getActiveSpreadsheet().toast('No article content from response.');
       return;
     }
+
     Logger.log('onFormSubmit: creating Q&A doc');
     createArticleDoc(article.title, article.body, ' - Q&A');
     Logger.log('onFormSubmit: calling Gemini for article...');
-    var aiBody = generateArticleFromQa(article.body, Config.CURRENT_FORM_ARTICLE_TYPE);
+    var aiBody = generateArticleFromQa(article.body, 'General Submission');
     var draftBody = aiBody || article.body;
     Logger.log('onFormSubmit: creating draft doc');
     var docUrl = createArticleDoc(article.title, draftBody, '');
     Logger.log('Doc created (draft): ' + docUrl);
 
-    var articleType = Config.CURRENT_FORM_ARTICLE_TYPE || 'Member Spotlight';
-    var prefix = Config.CURRENT_FORM_TASK_PREFIX || 'Member Spotlight';
-    var taskTitle = prefix + ': ' + (article.title || 'Draft');
-    appendArticleTask(articleType, taskTitle, docUrl, '');
-
-    SpreadsheetApp.getActiveSpreadsheet().toast('Q&A and draft docs created; task added.');
+    logDraftToSheet(article.title, docUrl);
+    SpreadsheetApp.getActiveSpreadsheet().toast('Draft created and logged to "Drafts Log" sheet.');
   } catch (err) {
     Logger.log('onFormSubmit ERROR: ' + err.message);
     Logger.log(err.stack || err.toString());
