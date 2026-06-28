@@ -18,22 +18,25 @@ function testWithLastResponse() {
 
   try {
     var article = buildArticleFromResponse(values, headers);
-    if (!article || (!article.body && !article.title)) {
+    if (!article || !article.body) {
       SpreadsheetApp.getActiveSpreadsheet().toast('No article content from that row.');
       return;
     }
 
+    Logger.log('testWithLastResponse: calling Gemini for article and title...');
+    var generated = generateArticle(article.body);
+    var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+    var draftBody = generated.body || article.body;
+    Logger.log('testWithLastResponse: title = "' + docTitle + '"');
+
     Logger.log('testWithLastResponse: creating Q&A doc');
-    var qaDocUrl = createArticleDoc(article.title, article.body, ' - Q&A');
-    Logger.log('testWithLastResponse: calling Gemini for article...');
-    var aiBody = generateArticleFromQa(article.body, 'General Submission');
-    var draftBody = aiBody || article.body;
+    var qaDocUrl = createArticleDoc(docTitle, article.body, ' - Q&A');
     Logger.log('testWithLastResponse: creating draft doc');
-    var docUrl = createArticleDoc(article.title, draftBody, '', article.visualAssets);
+    var docUrl = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
     Logger.log('Doc created (draft): ' + docUrl + '; Q&A: ' + qaDocUrl);
-    
+
     Logger.log('testWithLastResponse: logging draft details to sheet');
-    var appendedRow = logDraftToSheet(article.title, docUrl);
+    var appendedRow = logDraftToSheet(docTitle, docUrl);
     Logger.log('testWithLastResponse: draft logged at row ' + appendedRow);
     SpreadsheetApp.getActiveSpreadsheet().toast('Draft doc created and logged. Check Drive and the "Drafts Log" tab.');
   } catch (err) {
@@ -61,21 +64,24 @@ function onFormSubmit(e) {
 
   try {
     var article = buildArticleFromResponse(values, headers);
-    if (!article || (!article.body && !article.title)) {
+    if (!article || !article.body) {
       SpreadsheetApp.getActiveSpreadsheet().toast('No article content from response.');
       return;
     }
 
+    Logger.log('onFormSubmit: calling Gemini for article and title...');
+    var generated = generateArticle(article.body);
+    var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+    var draftBody = generated.body || article.body;
+    Logger.log('onFormSubmit: title = "' + docTitle + '"');
+
     Logger.log('onFormSubmit: creating Q&A doc');
-    createArticleDoc(article.title, article.body, ' - Q&A');
-    Logger.log('onFormSubmit: calling Gemini for article...');
-    var aiBody = generateArticleFromQa(article.body, 'General Submission');
-    var draftBody = aiBody || article.body;
+    createArticleDoc(docTitle, article.body, ' - Q&A');
     Logger.log('onFormSubmit: creating draft doc');
-    var docUrl = createArticleDoc(article.title, draftBody, '', article.visualAssets);
+    var docUrl = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
     Logger.log('Doc created (draft): ' + docUrl);
 
-    logDraftToSheet(article.title, docUrl);
+    logDraftToSheet(docTitle, docUrl);
     SpreadsheetApp.getActiveSpreadsheet().toast('Draft created and logged to "Drafts Log" sheet.');
   } catch (err) {
     Logger.log('onFormSubmit ERROR: ' + err.message);

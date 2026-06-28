@@ -1,35 +1,17 @@
-function _normalizeHeader(h) {
-  return String(h || '').trim().toLowerCase().replace(/\s+/g, ' ');
-}
-
-function _isTitleHeader(header) {
-  var n = _normalizeHeader(header);
-  if (!n) return false;
-  return (
-    n.indexOf('headline') !== -1 ||
-    n.indexOf('title') !== -1 ||
-    n.indexOf('subject') !== -1 ||
-    n.indexOf('summary') !== -1 ||
-    n.indexOf('your name') !== -1 ||
-    n === 'name'
-  );
-}
-
 /**
- * Builds article text from one form response. Output is Q/A format.
- * Title is taken from a column containing title keywords, else first short value.
+ * Builds Q/A article text from one form response.
+ * Title generation is handled by Gemini (generateTitleFromQa in GeminiArticle.gs).
  *
  * @param {Array} values - new row from e.values
  * @param {Array} headers - header row (same length as values)
- * @return {Object} { title, body }
+ * @return {Object} { body, visualAssets }
  */
 function buildArticleFromResponse(values, headers) {
   if (!values || !headers || values.length === 0) {
-    return { title: 'Article draft', body: '', visualAssets: '' };
+    return { body: '', visualAssets: '' };
   }
 
   var qaBlocks = [];
-  var title = '';
   var visualAssets = '';
 
   for (var i = 0; i < values.length; i++) {
@@ -44,38 +26,20 @@ function buildArticleFromResponse(values, headers) {
       visualAssets = value;
     }
 
-    if (_isTitleHeader(question)) {
-      title = value;
-    } else if (!title && value.length > 0 && value.length < 100) {
-      title = value;
-    }
-
     qaBlocks.push('Q: ' + (question || '') + '\nA: ' + value);
   }
 
-  var body = qaBlocks.join('\n\n');
-  if (!title) {
-    title = Config.DEFAULT_TITLE || 'Article draft';
-  } else if (title.length > 60) {
-    // Truncate at a space boundary for neatness
-    var truncated = title.substring(0, 60);
-    var lastSpace = truncated.lastIndexOf(' ');
-    if (lastSpace > 40) {
-      title = truncated.substring(0, lastSpace).trim() + '...';
-    } else {
-      title = truncated.trim() + '...';
-    }
-  }
-  return { title: title, body: body, visualAssets: visualAssets };
+  return { body: qaBlocks.join('\n\n'), visualAssets: visualAssets };
 }
 
 /**
  * Creates a new Google Doc with the given title and body; moves to Config.DRAFT_FOLDER_ID if set.
  * Doc name = date (YYYY-MM-DD) + optional Config.DOC_TITLE_PREFIX + title + optional nameSuffix.
  *
- * @param {string} title - used in file name (e.g. from Headline/Title or Member Name column)
+ * @param {string} title - AI-generated title for the article
  * @param {string} body - plain text body; newlines preserved
- * @param {string} [nameSuffix] - optional suffix for file name (e.g. ' - Q&A', ' - Draft')
+ * @param {string} [nameSuffix] - optional suffix for file name (e.g. ' - Q&A')
+ * @param {string} [visualAssetsUrl] - optional Visual Assets link to append for editors
  * @return {string} doc.getUrl()
  */
 function createArticleDoc(title, body, nameSuffix, visualAssetsUrl) {

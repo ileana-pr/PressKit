@@ -54,11 +54,16 @@ function setupPipeline() {
   // Link the new Form to this spreadsheet
   form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
   
-  // 2. Initialize the Drafts Log Tab
+  // 2. Initialize the Drafts Log on the main (first) sheet.
+  // When form.setDestination() runs above, Google creates a new "Form Responses 1"
+  // tab automatically — so the original first sheet stays empty and is the perfect
+  // home for the log. We rename it and write headers there.
   var logSheetName = Config.DRAFT_LOG_SHEET_NAME || 'Drafts Log';
   var logSheet = ss.getSheetByName(logSheetName);
   if (!logSheet) {
-    logSheet = ss.insertSheet(logSheetName);
+    // Use the first sheet (empty) rather than inserting a new tab
+    logSheet = ss.getSheets()[0];
+    logSheet.setName(logSheetName);
     logSheet.appendRow(['Date', 'Draft Title', 'Google Doc Link']);
     logSheet.getRange(1, 1, 1, 3).setFontWeight('bold');
     logSheet.setColumnWidth(1, 120);

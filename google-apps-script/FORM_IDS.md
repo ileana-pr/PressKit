@@ -1,6 +1,6 @@
 # Script IDs (for Clasp Developer Setup)
 
-With the **Consolidated Form** update, you no longer need to manage and deploy to multiple separate form response sheet script IDs! There is now only **one script project** attached to your single consolidated form response sheet.
+There is only **one script project** in this pipeline — attached to the single consolidated form response spreadsheet.
 
 ---
 
@@ -8,7 +8,7 @@ With the **Consolidated Form** update, you no longer need to manage and deploy t
 
 **IMPORTANT:** Always use the **Apps Script Project ID (Script ID)** in clasp, *not* the Google Sheet spreadsheet ID.
 
-1. Open your **consolidated form response spreadsheet** in your browser.
+1. Open your **form response spreadsheet** in your browser.
 2. Go to the top menu and select **Extensions ➔ Apps Script**.
 3. In the left-hand sidebar of the Apps Script editor, click the **Project Settings (gear icon)**.
 4. Copy the **Script ID** (under the "IDs" section).
@@ -18,15 +18,19 @@ With the **Consolidated Form** update, you no longer need to manage and deploy t
      "scriptId": "YOUR_COPIED_SCRIPT_ID"
    }
    ```
-6. Now you can run `clasp push` from the root of the repository to deploy all script files directly into the sheet's Apps Script project!
+6. Now you can run `clasp push` from the root of the repository to deploy all script files directly into the sheet's Apps Script project.
 
 ---
 
-## 🔄 Automated Universal Mapping
+## 📋 How Form Fields Map Through the Pipeline
 
-The pipeline now automatically maps and formats all incoming community submissions, generating Google Doc drafts and logging them directly inside the same response spreadsheet:
-
-| Submission Field | Script Action | Logged Tab Location |
+| Form Field | Script Action | Where It Ends Up |
 | :--- | :--- | :--- |
-| **Name / Summary Column** | Auto-identified and truncated to neat length | `'Drafts Log'` tab (`Date`, `Draft Title`, `Google Doc Link`) |
-| **All Generic Q&A Fields** | Formatted into a clean structured block for Gemini | Logged as deliverables in spreadsheet |
+| **All Q&A Fields** | Packaged into a structured Q/A block | Q&A Doc (raw source); fed to Gemini for article + title |
+| **Gemini-generated title** | Produced from full submission context (≤ 10 words) | Google Doc filenames + `Drafts Log` tab (`Draft Title` column) |
+| **Visual Assets** (Drive/Dropbox link) | Extracted separately; not rewritten by AI | Appended as **📸 Visual Assets** section at the bottom of the draft Doc |
+| **Consent & Attribution** | Captured in Q&A block; Gemini is instructed to exclude it from the article | Q&A Doc only |
+
+---
+
+The `Drafts Log` tab always contains: `Date`, `Draft Title`, and `Google Doc Link` (pointing to the polished AI draft).
