@@ -25,11 +25,12 @@ function _isTitleHeader(header) {
  */
 function buildArticleFromResponse(values, headers) {
   if (!values || !headers || values.length === 0) {
-    return { title: 'Article draft', body: '' };
+    return { title: 'Article draft', body: '', visualAssets: '' };
   }
 
   var qaBlocks = [];
   var title = '';
+  var visualAssets = '';
 
   for (var i = 0; i < values.length; i++) {
     var question = String(headers[i] || '').trim();
@@ -37,6 +38,12 @@ function buildArticleFromResponse(values, headers) {
     if (!value) continue;
 
     if (question.toLowerCase().indexOf('timestamp') !== -1) continue;
+
+    // Capture the Visual Assets link separately so it can be surfaced in the draft doc
+    if (question.toLowerCase().indexOf('visual') !== -1) {
+      visualAssets = value;
+    }
+
     if (_isTitleHeader(question)) {
       title = value;
     } else if (!title && value.length > 0 && value.length < 100) {
@@ -59,7 +66,7 @@ function buildArticleFromResponse(values, headers) {
       title = truncated.trim() + '...';
     }
   }
-  return { title: title, body: body };
+  return { title: title, body: body, visualAssets: visualAssets };
 }
 
 /**
@@ -71,7 +78,7 @@ function buildArticleFromResponse(values, headers) {
  * @param {string} [nameSuffix] - optional suffix for file name (e.g. ' - Q&A', ' - Draft')
  * @return {string} doc.getUrl()
  */
-function createArticleDoc(title, body, nameSuffix) {
+function createArticleDoc(title, body, nameSuffix, visualAssetsUrl) {
   var dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
   var suffix = (nameSuffix !== undefined && nameSuffix !== null) ? nameSuffix : '';
   var fullTitle = dateStr + ' - ' + (Config.DOC_TITLE_PREFIX || '') + (title || 'Article draft') + suffix;
@@ -79,6 +86,18 @@ function createArticleDoc(title, body, nameSuffix) {
   var docBody = doc.getBody();
   var text = (body || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   docBody.setText(text);
+
+  // Append a clearly labeled Visual Assets section so the editor can
+  // access the submitted files without opening the original form response.
+  if (visualAssetsUrl) {
+    docBody.appendParagraph('');
+    var divider = docBody.appendParagraph('────────────────────────────────────────');
+    divider.setAlignment(DocumentApp.HorizontalAlignment.CENTER);
+    var label = docBody.appendParagraph('📸 Visual Assets (submitted by contributor)');
+    label.setBold(true);
+    docBody.appendParagraph(visualAssetsUrl);
+  }
+
   doc.saveAndClose();
 
   if (Config.DRAFT_FOLDER_ID) {

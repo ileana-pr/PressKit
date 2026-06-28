@@ -29,7 +29,7 @@ function testWithLastResponse() {
     var aiBody = generateArticleFromQa(article.body, 'General Submission');
     var draftBody = aiBody || article.body;
     Logger.log('testWithLastResponse: creating draft doc');
-    var docUrl = createArticleDoc(article.title, draftBody, '');
+    var docUrl = createArticleDoc(article.title, draftBody, '', article.visualAssets);
     Logger.log('Doc created (draft): ' + docUrl + '; Q&A: ' + qaDocUrl);
     
     Logger.log('testWithLastResponse: logging draft details to sheet');
@@ -72,7 +72,7 @@ function onFormSubmit(e) {
     var aiBody = generateArticleFromQa(article.body, 'General Submission');
     var draftBody = aiBody || article.body;
     Logger.log('onFormSubmit: creating draft doc');
-    var docUrl = createArticleDoc(article.title, draftBody, '');
+    var docUrl = createArticleDoc(article.title, draftBody, '', article.visualAssets);
     Logger.log('Doc created (draft): ' + docUrl);
 
     logDraftToSheet(article.title, docUrl);
