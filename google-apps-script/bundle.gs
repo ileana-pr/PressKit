@@ -441,6 +441,12 @@ function setupPipeline() {
   // Link the new Form to this spreadsheet
   form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
 
+  // Move the Form into the same Drive folder as this spreadsheet
+  var ssParents = DriveApp.getFileById(ss.getId()).getParents();
+  if (ssParents.hasNext()) {
+    DriveApp.getFileById(form.getId()).moveTo(ssParents.next());
+  }
+
   // 2. Initialize the Drafts Log on the main (first) sheet.
   // When form.setDestination() runs above, Google creates a new "Form Responses 1"
   // tab automatically — so the original first sheet stays empty and is the perfect
