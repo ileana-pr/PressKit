@@ -25,6 +25,9 @@
  * Universal template for any organization.
  */
 var Config = {
+  // Name given to the spreadsheet when setupPipeline() runs
+  SPREADSHEET_NAME: 'Newsletter Pipeline',
+
   // Name of the sheet/tab in this spreadsheet where generated drafts will be logged
   DRAFT_LOG_SHEET_NAME: 'Drafts Log',
 
@@ -404,6 +407,9 @@ function onFormSubmit(e) {
  */
 function setupPipeline() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Rename the spreadsheet so it's no longer 'Untitled'
+  ss.rename(Config.SPREADSHEET_NAME || 'Newsletter Pipeline');
 
   // 1. Initialize the Drafts Log on the main (first) sheet FIRST — before linking
   //    the form. When form.setDestination() runs below, Google appends a new

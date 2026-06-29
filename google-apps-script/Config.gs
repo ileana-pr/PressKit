@@ -3,6 +3,9 @@
  * Universal template for any organization.
  */
 var Config = {
+  // Name given to the spreadsheet when setupPipeline() runs
+  SPREADSHEET_NAME: 'Newsletter Pipeline',
+
   // Name of the sheet/tab in this spreadsheet where generated drafts will be logged
   DRAFT_LOG_SHEET_NAME: 'Drafts Log',
 
