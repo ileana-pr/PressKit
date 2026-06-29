@@ -109,4 +109,4 @@ clasp push
 
 ---
 
-*PressKit — AI Newsletter Pipeline. Built for the community, by @adigitaltati.* 🌊
+*PressKit — AI Newsletter Pipeline. Built for the community, by [@adigitaltati](https://x.com/adigitaltati)* 🌊
