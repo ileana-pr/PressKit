@@ -53,9 +53,10 @@ function generateArticle(qaText) {
     var code = response.getResponseCode();
     var responseBody = response.getContentText();
 
-    if (code === 429) {
-      Logger.log('GeminiArticle: quota exceeded (429). Retrying once in 36s...');
-      Utilities.sleep(36000);
+    if (code === 429 || code === 503) {
+      var waitMs = code === 429 ? 36000 : 10000;
+      Logger.log('GeminiArticle: error ' + code + '. Retrying once in ' + (waitMs / 1000) + 's...');
+      Utilities.sleep(waitMs);
       response = UrlFetchApp.fetch(url, options);
       code = response.getResponseCode();
       responseBody = response.getContentText();
@@ -65,6 +66,8 @@ function generateArticle(qaText) {
       Logger.log('GeminiArticle: API error HTTP ' + code);
       if (code === 429) {
         Logger.log('GeminiArticle: still over quota. Check https://ai.google.dev/gemini-api/docs/rate-limits or try again later.');
+      } else if (code === 503) {
+        Logger.log('GeminiArticle: still unavailable (503). Gemini is experiencing high demand. Try again in a few minutes.');
       }
       Logger.log('GeminiArticle: response body: ' + responseBody);
       return { title: '', body: '' };

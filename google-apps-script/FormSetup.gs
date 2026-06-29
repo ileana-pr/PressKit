@@ -17,11 +17,7 @@ function setupPipeline() {
   if (!logSheet) {
     logSheet = ss.getSheets()[0];
     logSheet.setName(logSheetName);
-    logSheet.appendRow(['Date', 'Draft Title', 'Google Doc Link']);
-    logSheet.getRange(1, 1, 1, 3).setFontWeight('bold');
-    logSheet.setColumnWidth(1, 120);
-    logSheet.setColumnWidth(2, 300);
-    logSheet.setColumnWidth(3, 400);
+    _initLogHeaders(logSheet);
   }
 
   // 2. Create the Google Form

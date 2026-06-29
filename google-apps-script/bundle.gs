@@ -257,35 +257,54 @@ function getGeminiApiKey() {
 
 // =============================================================================
 // SECTION 4: DRAFTS LOG
-// Writes the draft title and Doc link to the Drafts Log sheet.
+// Writes the draft title, Doc link, and status to the Drafts Log sheet.
 // =============================================================================
 
 /**
- * Logs a generated draft directly to the Drafts Log sheet in this spreadsheet.
+ * Logs a generated draft to the Drafts Log sheet in this spreadsheet.
  * If the sheet doesn't exist, it automatically creates it with headers.
  *
- * @param {string} title - title of the draft
- * @param {string} docUrl - link to the generated Google Doc
- * @return {number} row index of the logged draft
+ * Columns: Date | Draft Title | Google Doc Link | Status | Form Row
+ * "Form Row" is hidden — it stores the row number in the Form Responses sheet
+ * so failed drafts can be reprocessed automatically.
+ *
+ * @param {string} title    - title of the draft (or failure label)
+ * @param {string} docUrl   - link to the generated Google Doc (empty string on failure)
+ * @param {string} [status] - '✅ Done' (default) or '⚠️ FAILED'
+ * @param {number} [formRowNum] - row index in the Form Responses sheet (for retry)
+ * @return {number} row index of the logged entry
  */
-function logDraftToSheet(title, docUrl) {
+function logDraftToSheet(title, docUrl, status, formRowNum) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetName = Config.DRAFT_LOG_SHEET_NAME || 'Drafts Log';
   var sheet = ss.getSheetByName(sheetName);
 
-  // If the log sheet doesn't exist, create it with headers
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
-    sheet.appendRow(['Date', 'Draft Title', 'Google Doc Link']);
-    sheet.getRange(1, 1, 1, 3).setFontWeight('bold');
-    sheet.setColumnWidth(1, 120);
-    sheet.setColumnWidth(2, 300);
-    sheet.setColumnWidth(3, 400);
+    _initLogHeaders(sheet);
   }
 
   var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
-  sheet.appendRow([today, title, docUrl]);
+  var rowStatus  = status     || '✅ Done';
+  var rowFormRef = formRowNum || '';
+  sheet.appendRow([today, title, docUrl, rowStatus, rowFormRef]);
   return sheet.getLastRow();
+}
+
+/**
+ * Applies bold headers and column widths to a freshly created log sheet.
+ * Hides column E (Form Row) — it's internal plumbing, not for editors.
+ * @param {Sheet} sheet
+ */
+function _initLogHeaders(sheet) {
+  sheet.appendRow(['Date', 'Draft Title', 'Google Doc Link', 'Status', 'Form Row']);
+  sheet.getRange(1, 1, 1, 5).setFontWeight('bold');
+  sheet.setColumnWidth(1, 140);
+  sheet.setColumnWidth(2, 280);
+  sheet.setColumnWidth(3, 380);
+  sheet.setColumnWidth(4, 120);
+  sheet.setColumnWidth(5, 80);
+  sheet.hideColumns(5);
 }
 
 /**
@@ -303,9 +322,19 @@ function testLogDraftToSheet() {
 // =============================================================================
 
 /**
+ * Adds a "Newsletter Pipeline" menu to the spreadsheet toolbar when opened.
+ * Vibe coders can use this instead of the Apps Script function dropdown.
+ */
+function onOpen() {
+  SpreadsheetApp.getActiveSpreadsheet().addMenu('📋 Newsletter Pipeline', [
+    { name: '▶ Run Pipeline on Last Response', functionName: 'testWithLastResponse' },
+    { name: '🔄 Reprocess Failed Drafts',      functionName: 'reprocessFailed'       }
+  ]);
+}
+
+/**
  * Test: run the pipeline using the last filled row in the active sheet.
- * Open the form response sheet, run this from the script editor (Run → testWithLastResponse).
- * Creates a Doc and adds a row to the log tab using that row's data.
+ * Use the "Newsletter Pipeline" menu or the Apps Script editor.
  */
 function testWithLastResponse() {
   Logger.log('testWithLastResponse: starting');
@@ -313,85 +342,184 @@ function testWithLastResponse() {
   var sheet = ss.getActiveSheet();
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) {
-    SpreadsheetApp.getActiveSpreadsheet().toast('No data rows. Need at least row 1 (headers) and row 2 (one response).');
+    ss.toast('No data rows found. Submit the form first, then run again.');
     return;
   }
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var values = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var values  = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
   Logger.log('testWithLastResponse: lastRow=' + lastRow + ', building article');
 
   try {
     var article = buildArticleFromResponse(values, headers);
     if (!article || !article.body) {
-      SpreadsheetApp.getActiveSpreadsheet().toast('No article content from that row.');
+      ss.toast('No article content found in that row.');
       return;
     }
 
-    Logger.log('testWithLastResponse: calling Gemini for article and title...');
+    Logger.log('testWithLastResponse: calling Gemini...');
     var generated = generateArticle(article.body);
-    var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
-    var draftBody = generated.body || article.body;
+
+    // ── GUARD: if AI failed, log failure and stop — do NOT create docs ──
+    if (!generated.body) {
+      logDraftToSheet('⚠️ AI Failed – pending retry', '', '⚠️ FAILED', lastRow);
+      ss.toast('⚠️ Gemini is unavailable right now. This submission has been saved as Failed in the Drafts Log. Open the "📋 Newsletter Pipeline" menu and click "🔄 Reprocess Failed Drafts" to retry when Gemini is back.', 'AI Unavailable', 10);
+      return;
+    }
+
+    var docTitle  = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+    var draftBody = generated.body;
     Logger.log('testWithLastResponse: title = "' + docTitle + '"');
 
-    Logger.log('testWithLastResponse: creating Q&A doc');
     var qaDocUrl = createArticleDoc(docTitle, article.body, ' - Q&A');
-    Logger.log('testWithLastResponse: creating draft doc');
-    var docUrl = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
-    Logger.log('Doc created (draft): ' + docUrl + '; Q&A: ' + qaDocUrl);
+    var docUrl   = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
+    Logger.log('testWithLastResponse: draft=' + docUrl + ' | Q&A=' + qaDocUrl);
 
-    Logger.log('testWithLastResponse: logging draft details to sheet');
-    var appendedRow = logDraftToSheet(docTitle, docUrl);
-    Logger.log('testWithLastResponse: draft logged at row ' + appendedRow);
-    SpreadsheetApp.getActiveSpreadsheet().toast('Draft doc created and logged. Check Drive and the "Drafts Log" tab.');
+    logDraftToSheet(docTitle, docUrl, '✅ Done', lastRow);
+    ss.toast('Draft created and logged! Check the Drafts Log and your Drive folder. 🎉');
   } catch (err) {
     Logger.log('testWithLastResponse ERROR: ' + err.message);
     Logger.log(err.stack || err.toString());
-    SpreadsheetApp.getActiveSpreadsheet().toast('Error: ' + err.message);
+    ss.toast('Error: ' + err.message);
   }
 }
 
 /**
- * Runs when a new form response is submitted (install "On form submit" trigger).
- * Builds article from response, creates a Doc, logs draft info to the drafts sheet.
- * For manual testing, use testWithLastResponse() instead.
+ * Runs when a new form response is submitted ("On form submit" trigger).
+ * If Gemini fails, logs the row as FAILED for reprocessing — no Q&A dump.
  */
 function onFormSubmit(e) {
   if (!e || !e.values || e.values.length === 0) {
-    Logger.log('onFormSubmit: no event data. Use testWithLastResponse() to test with the last row.');
+    Logger.log('onFormSubmit: no event data. Use testWithLastResponse() to test manually.');
     return;
   }
 
   Logger.log('Form submitted');
-  var values = e.values;
-  var sheet = e.range ? e.range.getSheet() : SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var ss         = SpreadsheetApp.getActiveSpreadsheet();
+  var values     = e.values;
+  var sheet      = e.range ? e.range.getSheet() : ss.getActiveSheet();
+  var formRowNum = e.range ? e.range.rowStart : '';
+  var headers    = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   try {
     var article = buildArticleFromResponse(values, headers);
     if (!article || !article.body) {
-      SpreadsheetApp.getActiveSpreadsheet().toast('No article content from response.');
+      ss.toast('No article content found in submission.');
       return;
     }
 
-    Logger.log('onFormSubmit: calling Gemini for article and title...');
+    Logger.log('onFormSubmit: calling Gemini...');
     var generated = generateArticle(article.body);
-    var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
-    var draftBody = generated.body || article.body;
+
+    // ── GUARD: if AI failed, log failure and stop — do NOT create docs ──
+    if (!generated.body) {
+      logDraftToSheet('⚠️ AI Failed – pending retry', '', '⚠️ FAILED', formRowNum);
+      ss.toast('⚠️ Gemini unavailable. Submission saved as Failed — use the Newsletter Pipeline menu to retry.', 'AI Unavailable', 10);
+      return;
+    }
+
+    var docTitle  = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+    var draftBody = generated.body;
     Logger.log('onFormSubmit: title = "' + docTitle + '"');
 
-    Logger.log('onFormSubmit: creating Q&A doc');
     createArticleDoc(docTitle, article.body, ' - Q&A');
-    Logger.log('onFormSubmit: creating draft doc');
     var docUrl = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
-    Logger.log('Doc created (draft): ' + docUrl);
+    Logger.log('onFormSubmit: draft=' + docUrl);
 
-    logDraftToSheet(docTitle, docUrl);
-    SpreadsheetApp.getActiveSpreadsheet().toast('Draft created and logged to "Drafts Log" sheet.');
+    logDraftToSheet(docTitle, docUrl, '✅ Done', formRowNum);
+    ss.toast('Draft created and logged! 🎉');
   } catch (err) {
     Logger.log('onFormSubmit ERROR: ' + err.message);
     Logger.log(err.stack || err.toString());
-    SpreadsheetApp.getActiveSpreadsheet().toast('Error: ' + err.message);
+    ss.toast('Error: ' + err.message);
   }
+}
+
+/**
+ * Scans the Drafts Log for rows marked '⚠️ FAILED', retrieves the original
+ * form response by row number, and re-runs the full pipeline for each one.
+ * On success the log row is updated in place. Call from the Newsletter Pipeline menu.
+ */
+function reprocessFailed() {
+  var ss       = SpreadsheetApp.getActiveSpreadsheet();
+  var logSheet = ss.getSheetByName(Config.DRAFT_LOG_SHEET_NAME || 'Drafts Log');
+  if (!logSheet) { ss.toast('No Drafts Log found. Run setupPipeline first.'); return; }
+
+  var lastRow = logSheet.getLastRow();
+  if (lastRow < 2) { ss.toast('The Drafts Log is empty.'); return; }
+
+  var data = logSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+  var failedEntries = [];
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][3] === '⚠️ FAILED') {
+      failedEntries.push({ logRow: i + 2, formRowNum: data[i][4] });
+    }
+  }
+
+  if (failedEntries.length === 0) {
+    ss.toast('No failed drafts to reprocess — everything looks good! 🎉');
+    return;
+  }
+
+  var formSheet = _getFormResponseSheet(ss);
+  if (!formSheet) {
+    ss.toast('Could not find the Form Responses sheet. Make sure the form is still linked.');
+    return;
+  }
+
+  var headers      = formSheet.getRange(1, 1, 1, formSheet.getLastColumn()).getValues()[0];
+  var successCount = 0;
+  var failCount    = 0;
+
+  ss.toast('Reprocessing ' + failedEntries.length + ' failed draft(s)… this may take a minute.');
+
+  for (var k = 0; k < failedEntries.length; k++) {
+    var entry      = failedEntries[k];
+    var formRowNum = entry.formRowNum;
+    var logRow     = entry.logRow;
+
+    if (!formRowNum || formRowNum < 2) { failCount++; continue; }
+
+    try {
+      var values  = formSheet.getRange(formRowNum, 1, 1, formSheet.getLastColumn()).getValues()[0];
+      var article = buildArticleFromResponse(values, headers);
+      if (!article || !article.body) { failCount++; continue; }
+
+      var generated = generateArticle(article.body);
+      if (!generated.body) { failCount++; continue; }
+
+      var docTitle  = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+      var draftBody = generated.body;
+
+      createArticleDoc(docTitle, article.body, ' - Q&A');
+      var docUrl = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
+
+      logSheet.getRange(logRow, 2).setValue(docTitle);
+      logSheet.getRange(logRow, 3).setValue(docUrl);
+      logSheet.getRange(logRow, 4).setValue('✅ Done');
+
+      successCount++;
+    } catch (err) {
+      Logger.log('reprocessFailed error for log row ' + logRow + ': ' + err.message);
+      failCount++;
+    }
+  }
+
+  var msg = successCount + ' draft(s) reprocessed successfully!';
+  if (failCount > 0) msg += ' ' + failCount + ' still failed — try again later.';
+  ss.toast(msg, 'Reprocess Complete');
+}
+
+/**
+ * Returns the first sheet whose name contains "Form Responses", or null.
+ * @param {Spreadsheet} ss
+ * @return {Sheet|null}
+ */
+function _getFormResponseSheet(ss) {
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].getName().indexOf('Form Responses') !== -1) return sheets[i];
+  }
+  return null;
 }
 
 
@@ -419,11 +547,7 @@ function setupPipeline() {
   if (!logSheet) {
     logSheet = ss.getSheets()[0];
     logSheet.setName(logSheetName);
-    logSheet.appendRow(['Date', 'Draft Title', 'Google Doc Link']);
-    logSheet.getRange(1, 1, 1, 3).setFontWeight('bold');
-    logSheet.setColumnWidth(1, 120);
-    logSheet.setColumnWidth(2, 300);
-    logSheet.setColumnWidth(3, 400);
+    _initLogHeaders(logSheet);
   }
 
   // 2. Create the Google Form
