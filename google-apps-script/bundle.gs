@@ -1,5 +1,5 @@
 // =============================================================================
-// Universal Newsletter Pipeline — Single-File Bundle
+// PressKit — AI Newsletter Pipeline · Single-File Bundle
 // =============================================================================
 // HOW TO USE:
 //   1. Open your Google Sheet → Extensions ➔ Apps Script
@@ -21,7 +21,7 @@
 // =============================================================================
 
 /**
- * Master Newsletter Pipeline – General Configuration
+ * PressKit — AI Newsletter Pipeline · General Configuration
  * Universal template for any organization.
  */
 var Config = {
@@ -31,7 +31,7 @@ var Config = {
   ORG_NAME: '',
 
   // Name given to the spreadsheet when setupPipeline() runs
-  SPREADSHEET_NAME: 'Newsletter Pipeline',
+  SPREADSHEET_NAME: 'PressKit',
 
   // Name of the sheet/tab in this spreadsheet where generated drafts will be logged
   DRAFT_LOG_SHEET_NAME: 'Drafts Log',
@@ -243,7 +243,7 @@ function generateArticle(qaText) {
     }
 
     var title = (result.title || '').trim().replace(/[.!?]+$/, ''); // strip trailing punctuation
-    var body  = (result.body  || '').trim();
+    var body = (result.body || '').trim();
 
     Logger.log('GeminiArticle: success — title: "' + title + '", body: ' + body.length + ' chars');
     return { title: title, body: body };
@@ -290,7 +290,7 @@ function logDraftToSheet(title, docUrl, status, formRowNum) {
   }
 
   var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
-  var rowStatus  = status     || '✅ Done';
+  var rowStatus = status || '✅ Done';
   var rowFormRef = formRowNum || '';
   sheet.appendRow([today, title, docUrl, rowStatus, rowFormRef]);
   return sheet.getLastRow();
@@ -316,7 +316,7 @@ function _initLogHeaders(sheet) {
  * Developer utility to test logging to the local spreadsheet.
  */
 function testLogDraftToSheet() {
-  var row = logDraftToSheet('TEST – Universal Newsletter Draft', 'https://docs.google.com/document/d/example/edit');
+  var row = logDraftToSheet('TEST – PressKit Draft', 'https://docs.google.com/document/d/example/edit');
   Logger.log('Logged test draft at row ' + row + ' in the "Drafts Log" sheet.');
 }
 
@@ -327,20 +327,20 @@ function testLogDraftToSheet() {
 // =============================================================================
 
 /**
- * Adds a "Newsletter Pipeline" menu to the spreadsheet toolbar when opened.
+ * Adds a "📋 PressKit" menu to the spreadsheet toolbar when opened.
  * Vibe coders can use this instead of the Apps Script function dropdown.
  */
 function onOpen() {
-  SpreadsheetApp.getActiveSpreadsheet().addMenu('📋 Newsletter Pipeline', [
+  SpreadsheetApp.getActiveSpreadsheet().addMenu('�� PressKit', [
     { name: '▶ Run Pipeline on Last Response', functionName: 'testWithLastResponse' },
-    { name: '🔄 Reprocess Failed Drafts',      functionName: 'reprocessFailed'       },
-    { name: '🧪 Submit Test Form Data',         functionName: 'seedTestData'          }
+    { name: '🔄 Reprocess Failed Drafts', functionName: 'reprocessFailed' },
+    { name: '🧪 Submit Test Form Data', functionName: 'seedTestData' }
   ]);
 }
 
 /**
  * Test: run the pipeline using the last filled row in the active sheet.
- * Use the "Newsletter Pipeline" menu or the Apps Script editor.
+ * Use the "📋 PressKit" menu or the Apps Script editor.
  */
 function testWithLastResponse() {
   Logger.log('testWithLastResponse: starting');
@@ -352,7 +352,7 @@ function testWithLastResponse() {
     return;
   }
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var values  = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var values = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
   Logger.log('testWithLastResponse: lastRow=' + lastRow + ', building article');
 
   try {
@@ -368,16 +368,16 @@ function testWithLastResponse() {
     // ── GUARD: if AI failed, log failure and stop — do NOT create docs ──
     if (!generated.body) {
       logDraftToSheet('⚠️ AI Failed – pending retry', '', '⚠️ FAILED', lastRow);
-      ss.toast('⚠️ Gemini is unavailable right now. This submission has been saved as Failed in the Drafts Log. Open the "📋 Newsletter Pipeline" menu and click "🔄 Reprocess Failed Drafts" to retry when Gemini is back.', 'AI Unavailable', 10);
+      ss.toast('⚠️ Gemini is unavailable right now. This submission has been saved as Failed in the Drafts Log. Open the "📋 PressKit" menu and click "🔄 Reprocess Failed Drafts" to retry when Gemini is back.', 'AI Unavailable', 10);
       return;
     }
 
-    var docTitle  = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+    var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
     var draftBody = generated.body;
     Logger.log('testWithLastResponse: title = "' + docTitle + '"');
 
     var qaDocUrl = createArticleDoc(docTitle, article.body, ' - Q&A');
-    var docUrl   = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
+    var docUrl = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
     Logger.log('testWithLastResponse: draft=' + docUrl + ' | Q&A=' + qaDocUrl);
 
     logDraftToSheet(docTitle, docUrl, '✅ Done', lastRow);
@@ -400,11 +400,11 @@ function onFormSubmit(e) {
   }
 
   Logger.log('Form submitted');
-  var ss         = SpreadsheetApp.getActiveSpreadsheet();
-  var values     = e.values;
-  var sheet      = e.range ? e.range.getSheet() : ss.getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var values = e.values;
+  var sheet = e.range ? e.range.getSheet() : ss.getActiveSheet();
   var formRowNum = e.range ? e.range.rowStart : '';
-  var headers    = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   try {
     var article = buildArticleFromResponse(values, headers);
@@ -419,11 +419,11 @@ function onFormSubmit(e) {
     // ── GUARD: if AI failed, log failure and stop — do NOT create docs ──
     if (!generated.body) {
       logDraftToSheet('⚠️ AI Failed – pending retry', '', '⚠️ FAILED', formRowNum);
-      ss.toast('⚠️ Gemini unavailable. Submission saved as Failed — use the Newsletter Pipeline menu to retry.', 'AI Unavailable', 10);
+      ss.toast('⚠️ Gemini unavailable. Submission saved as Failed — use the PressKit menu to retry.', 'AI Unavailable', 10);
       return;
     }
 
-    var docTitle  = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+    var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
     var draftBody = generated.body;
     Logger.log('onFormSubmit: title = "' + docTitle + '"');
 
@@ -443,10 +443,10 @@ function onFormSubmit(e) {
 /**
  * Scans the Drafts Log for rows marked '⚠️ FAILED', retrieves the original
  * form response by row number, and re-runs the full pipeline for each one.
- * On success the log row is updated in place. Call from the Newsletter Pipeline menu.
+ * On success the log row is updated in place. Call from the PressKit menu.
  */
 function reprocessFailed() {
-  var ss       = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var logSheet = ss.getSheetByName(Config.DRAFT_LOG_SHEET_NAME || 'Drafts Log');
   if (!logSheet) { ss.toast('No Drafts Log found. Run setupPipeline first.'); return; }
 
@@ -472,28 +472,28 @@ function reprocessFailed() {
     return;
   }
 
-  var headers      = formSheet.getRange(1, 1, 1, formSheet.getLastColumn()).getValues()[0];
+  var headers = formSheet.getRange(1, 1, 1, formSheet.getLastColumn()).getValues()[0];
   var successCount = 0;
-  var failCount    = 0;
+  var failCount = 0;
 
   ss.toast('Reprocessing ' + failedEntries.length + ' failed draft(s)… this may take a minute.');
 
   for (var k = 0; k < failedEntries.length; k++) {
-    var entry      = failedEntries[k];
+    var entry = failedEntries[k];
     var formRowNum = entry.formRowNum;
-    var logRow     = entry.logRow;
+    var logRow = entry.logRow;
 
     if (!formRowNum || formRowNum < 2) { failCount++; continue; }
 
     try {
-      var values  = formSheet.getRange(formRowNum, 1, 1, formSheet.getLastColumn()).getValues()[0];
+      var values = formSheet.getRange(formRowNum, 1, 1, formSheet.getLastColumn()).getValues()[0];
       var article = buildArticleFromResponse(values, headers);
       if (!article || !article.body) { failCount++; continue; }
 
       var generated = generateArticle(article.body);
       if (!generated.body) { failCount++; continue; }
 
-      var docTitle  = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+      var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
       var draftBody = generated.body;
 
       createArticleDoc(docTitle, article.body, ' - Q&A');
@@ -543,7 +543,7 @@ function setupPipeline() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
   // Rename the spreadsheet so it's no longer 'Untitled'
-  ss.rename(Config.SPREADSHEET_NAME || 'Newsletter Pipeline');
+  ss.rename(Config.SPREADSHEET_NAME || 'PressKit');
 
   // 1. Initialize the Drafts Log on the main (first) sheet FIRST — before linking
   //    the form. When form.setDestination() runs below, Google appends a new
@@ -564,42 +564,42 @@ function setupPipeline() {
   form.addTextItem().setTitle('Your Name').setRequired(true);
 
   form.addTextItem()
-      .setTitle('Your Role/Title')
-      .setHelpText('Example: Lead Developer, Community Member, Partner Organization')
-      .setRequired(true);
+    .setTitle('Your Role/Title')
+    .setHelpText('Example: Lead Developer, Community Member, Partner Organization')
+    .setRequired(true);
 
   form.addTextItem().setTitle('Your Telegram').setRequired(true);
   form.addTextItem().setTitle('Your Twitter').setRequired(true);
 
   form.addParagraphTextItem()
-      .setTitle('Summary (2-4 sentences)')
-      .setHelpText('Give us the core message. What\'s the key takeaway?')
-      .setRequired(true);
+    .setTitle('Summary (2-4 sentences)')
+    .setHelpText('Give us the core message. What\'s the key takeaway?')
+    .setRequired(true);
 
   form.addParagraphTextItem()
-      .setTitle('Full Description')
-      .setHelpText('Share the complete story, details, background, or context. What impact does it have? What do you want readers to do?')
-      .setRequired(true);
+    .setTitle('Full Description')
+    .setHelpText('Share the complete story, details, background, or context. What impact does it have? What do you want readers to do?')
+    .setRequired(true);
 
   form.addParagraphTextItem()
-      .setTitle('Links')
-      .setHelpText('Relevant URLs: websites, social posts, articles, registration pages, etc.');
+    .setTitle('Links')
+    .setHelpText('Relevant URLs: websites, social posts, articles, registration pages, etc.');
 
   form.addParagraphTextItem()
-      .setTitle('Visual Assets')
-      .setHelpText('Share photos, logos, graphics via link (Google Drive, Dropbox, etc.)');
+    .setTitle('Visual Assets')
+    .setHelpText('Share photos, logos, graphics via link (Google Drive, Dropbox, etc.)');
 
   form.addParagraphTextItem()
-      .setTitle('Contact Information (if applicable)')
-      .setHelpText('(Email, social handles, website)');
+    .setTitle('Contact Information (if applicable)')
+    .setHelpText('(Email, social handles, website)');
 
   var consent = form.addCheckboxItem();
   consent.setTitle('Consent & Attribution')
-         .setChoices([
-           consent.createChoice('I have permission to submit this content and any included photos/quotes'),
-           consent.createChoice('I consent to editing this content for clarity, length, and style')
-         ])
-         .setRequired(true);
+    .setChoices([
+      consent.createChoice('I have permission to submit this content and any included photos/quotes'),
+      consent.createChoice('I consent to editing this content for clarity, length, and style')
+    ])
+    .setRequired(true);
 
   // 3. Link the form — this appends a new "Form Responses 1" tab after the log
   form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
@@ -622,9 +622,9 @@ function setupPipeline() {
 
   if (!triggerExists) {
     ScriptApp.newTrigger('onFormSubmit')
-             .forSpreadsheet(ss)
-             .onFormSubmit()
-             .create();
+      .forSpreadsheet(ss)
+      .onFormSubmit()
+      .create();
     Logger.log('Installed form submit trigger successfully.');
   } else {
     Logger.log('Form submit trigger already exists.');
@@ -645,7 +645,7 @@ function setupPipeline() {
 // SECTION 7: TEST DATA SEEDER
 // Uses Gemini to generate 3 diverse, realistic test submissions on the spot,
 // then submits them through the linked form so the full pipeline runs end-to-end.
-// Call from the "Newsletter Pipeline" menu → "🧪 Submit Test Form Data".
+// Call from the "📋 PressKit" menu → "🧪 Submit Test Form Data".
 // =============================================================================
 
 /**
@@ -657,7 +657,7 @@ function setupPipeline() {
  * Leave it blank for generic output that works with any org.
  */
 function seedTestData() {
-  var ss      = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var formUrl = ss.getFormUrl();
 
   if (!formUrl) {
@@ -673,7 +673,7 @@ function seedTestData() {
     return;
   }
 
-  var form  = FormApp.openByUrl(formUrl);
+  var form = FormApp.openByUrl(formUrl);
   var count = 0;
 
   for (var i = 0; i < submissions.length; i++) {
@@ -708,7 +708,7 @@ function _generateTestSubmissions() {
     : 'Use a fictional but realistic organization name — do NOT use placeholder text like "Your Organization".';
 
   var model = Config.GEMINI_MODEL || 'gemini-2.5-flash-lite';
-  var url   = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent';
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent';
 
   var prompt =
     'You are helping test a newsletter submission pipeline. Generate 3 realistic, engaging, and diverse newsletter form submissions.\n'
@@ -755,7 +755,7 @@ function _generateTestSubmissions() {
 
     if (code !== 200) { Logger.log('_generateTestSubmissions: API error ' + code + ': ' + body); return null; }
 
-    var data    = JSON.parse(body);
+    var data = JSON.parse(body);
     var rawText = data.candidates && data.candidates[0] && data.candidates[0].content
       && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
       ? data.candidates[0].content.parts[0].text : '';
@@ -781,16 +781,16 @@ function _generateTestSubmissions() {
  * @param {Object} answers - { 'Question title': 'Answer text' | ['Choice 1', ...] }
  */
 function _submitFormResponse(form, answers) {
-  var items    = form.getItems();
+  var items = form.getItems();
   var response = form.createResponse();
 
   for (var i = 0; i < items.length; i++) {
-    var item   = items[i];
-    var title  = item.getTitle();
+    var item = items[i];
+    var title = item.getTitle();
     var answer = answers[title];
     if (answer === undefined || answer === null || answer === '') continue;
 
-    var itemType     = item.getType();
+    var itemType = item.getType();
     var itemResponse = null;
 
     if (itemType === FormApp.ItemType.TEXT) {
@@ -817,7 +817,7 @@ function _submitFormResponse(form, answers) {
  * Leave it blank for generic output that works with any org.
  */
 function seedTestData() {
-  var ss      = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var formUrl = ss.getFormUrl();
 
   if (!formUrl) {
@@ -852,7 +852,7 @@ function seedTestData() {
   }
 
   var submissions = result.data;
-  var form  = FormApp.openByUrl(formUrl);
+  var form = FormApp.openByUrl(formUrl);
   var count = 0;
 
   for (var i = 0; i < submissions.length; i++) {
@@ -899,7 +899,7 @@ function _generateTestSubmissions() {
     : 'Use a fictional but realistic organization name — do NOT use placeholder text like "Your Organization".';
 
   var model = Config.GEMINI_MODEL || 'gemini-2.5-flash-lite';
-  var url   = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent';
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent';
 
   var prompt =
     'You are helping test a newsletter submission pipeline. Generate 3 realistic, engaging, and diverse newsletter form submissions.\n'
@@ -943,7 +943,7 @@ function _generateTestSubmissions() {
       lastBody = response.getContentText();
 
       if (lastCode === 200) {
-        var data    = JSON.parse(lastBody);
+        var data = JSON.parse(lastBody);
         var rawText = data.candidates && data.candidates[0] && data.candidates[0].content
           && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
           ? data.candidates[0].content.parts[0].text : '';
@@ -1002,16 +1002,16 @@ function _generateTestSubmissions() {
  * @param {Object} answers - { 'Question title': 'Answer text' | ['Choice 1', ...] }
  */
 function _submitFormResponse(form, answers) {
-  var items    = form.getItems();
+  var items = form.getItems();
   var response = form.createResponse();
 
   for (var i = 0; i < items.length; i++) {
-    var item   = items[i];
-    var title  = item.getTitle();
+    var item = items[i];
+    var title = item.getTitle();
     var answer = answers[title];
     if (answer === undefined || answer === null || answer === '') continue;
 
-    var itemType     = item.getType();
+    var itemType = item.getType();
     var itemResponse = null;
 
     if (itemType === FormApp.ItemType.TEXT) {

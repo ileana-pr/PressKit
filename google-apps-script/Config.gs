@@ -1,5 +1,5 @@
 /**
- * Master Newsletter Pipeline – General Configuration
+ * PressKit — AI Newsletter Pipeline · General Configuration
  * Universal template for any organization.
  */
 var Config = {
@@ -9,7 +9,7 @@ var Config = {
   ORG_NAME: '',
 
   // Name given to the spreadsheet when setupPipeline() runs
-  SPREADSHEET_NAME: 'Newsletter Pipeline',
+  SPREADSHEET_NAME: 'PressKit',
 
   // Name of the sheet/tab in this spreadsheet where generated drafts will be logged
   DRAFT_LOG_SHEET_NAME: 'Drafts Log',

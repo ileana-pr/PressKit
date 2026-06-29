@@ -1,12 +1,12 @@
 /**
- * Adds a "Newsletter Pipeline" menu to the spreadsheet toolbar when the sheet is opened.
+ * Adds a "📋 PressKit" menu to the spreadsheet toolbar when the sheet is opened.
  * Vibe coders can use this menu instead of the Apps Script function dropdown.
  */
 function onOpen() {
-  SpreadsheetApp.getActiveSpreadsheet().addMenu('📋 Newsletter Pipeline', [
+  SpreadsheetApp.getActiveSpreadsheet().addMenu('📋 PressKit', [
     { name: '▶ Run Pipeline on Last Response', functionName: 'testWithLastResponse' },
-    { name: '🔄 Reprocess Failed Drafts',      functionName: 'reprocessFailed'       },
-    { name: '🧪 Submit Test Form Data',         functionName: 'seedTestData'          }
+    { name: '🔄 Reprocess Failed Drafts', functionName: 'reprocessFailed' },
+    { name: '🧪 Submit Test Form Data', functionName: 'seedTestData' }
   ]);
 }
 
@@ -16,7 +16,7 @@ function onOpen() {
 
 /**
  * Test: run the pipeline using the last filled row in the active sheet.
- * Open the form response sheet, then use the "Newsletter Pipeline" menu or
+ * Open the form response sheet, then use the "📋 PressKit" menu or
  * the Apps Script editor (Run → testWithLastResponse).
  */
 function testWithLastResponse() {
@@ -29,7 +29,7 @@ function testWithLastResponse() {
     return;
   }
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var values  = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var values = sheet.getRange(lastRow, 1, 1, sheet.getLastColumn()).getValues()[0];
   Logger.log('testWithLastResponse: lastRow=' + lastRow + ', building article');
 
   try {
@@ -45,16 +45,16 @@ function testWithLastResponse() {
     // ── GUARD: if AI failed, log failure and stop — do NOT create docs ──
     if (!generated.body) {
       logDraftToSheet('⚠️ AI Failed – pending retry', '', '⚠️ FAILED', lastRow);
-      ss.toast('⚠️ Gemini is unavailable right now. This submission has been saved as Failed in the Drafts Log. Open the "📋 Newsletter Pipeline" menu and click "🔄 Reprocess Failed Drafts" to retry when Gemini is back.', 'AI Unavailable', 10);
+      ss.toast('⚠️ Gemini is unavailable right now. This submission has been saved as Failed in the Drafts Log. Open the "📋 PressKit" menu and click "🔄 Reprocess Failed Drafts" to retry when Gemini is back.', 'AI Unavailable', 10);
       return;
     }
 
-    var docTitle  = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+    var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
     var draftBody = generated.body;
     Logger.log('testWithLastResponse: title = "' + docTitle + '"');
 
     var qaDocUrl = createArticleDoc(docTitle, article.body, ' - Q&A');
-    var docUrl   = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
+    var docUrl = createArticleDoc(docTitle, draftBody, '', article.visualAssets);
     Logger.log('testWithLastResponse: draft=' + docUrl + ' | Q&A=' + qaDocUrl);
 
     logDraftToSheet(docTitle, docUrl, '✅ Done', lastRow);
@@ -81,11 +81,11 @@ function onFormSubmit(e) {
   }
 
   Logger.log('Form submitted');
-  var ss       = SpreadsheetApp.getActiveSpreadsheet();
-  var values   = e.values;
-  var sheet    = e.range ? e.range.getSheet() : ss.getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var values = e.values;
+  var sheet = e.range ? e.range.getSheet() : ss.getActiveSheet();
   var formRowNum = e.range ? e.range.rowStart : '';
-  var headers  = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
   try {
     var article = buildArticleFromResponse(values, headers);
@@ -100,11 +100,11 @@ function onFormSubmit(e) {
     // ── GUARD: if AI failed, log failure and stop — do NOT create docs ──
     if (!generated.body) {
       logDraftToSheet('⚠️ AI Failed – pending retry', '', '⚠️ FAILED', formRowNum);
-      ss.toast('⚠️ Gemini unavailable. Submission saved as Failed — use the Newsletter Pipeline menu to retry.', 'AI Unavailable', 10);
+      ss.toast('⚠️ Gemini unavailable. Submission saved as Failed — use the PressKit menu to retry.', 'AI Unavailable', 10);
       return;
     }
 
-    var docTitle  = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+    var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
     var draftBody = generated.body;
     Logger.log('onFormSubmit: title = "' + docTitle + '"');
 
@@ -128,11 +128,11 @@ function onFormSubmit(e) {
 /**
  * Scans the Drafts Log for rows marked '⚠️ FAILED', retrieves the original
  * form response by row number, and re-runs the full pipeline for each one.
- * On success the log row is updated in place. Call from the Newsletter Pipeline menu.
+ * On success the log row is updated in place. Call from the PressKit menu.
  */
 function reprocessFailed() {
-  var ss        = SpreadsheetApp.getActiveSpreadsheet();
-  var logSheet  = ss.getSheetByName(Config.DRAFT_LOG_SHEET_NAME || 'Drafts Log');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var logSheet = ss.getSheetByName(Config.DRAFT_LOG_SHEET_NAME || 'Drafts Log');
   if (!logSheet) { ss.toast('No Drafts Log found. Run setupPipeline first.'); return; }
 
   var lastRow = logSheet.getLastRow();
@@ -160,16 +160,16 @@ function reprocessFailed() {
     return;
   }
 
-  var headers      = formSheet.getRange(1, 1, 1, formSheet.getLastColumn()).getValues()[0];
+  var headers = formSheet.getRange(1, 1, 1, formSheet.getLastColumn()).getValues()[0];
   var successCount = 0;
-  var failCount    = 0;
+  var failCount = 0;
 
   ss.toast('Reprocessing ' + failedEntries.length + ' failed draft(s)… this may take a minute.');
 
   for (var k = 0; k < failedEntries.length; k++) {
-    var entry      = failedEntries[k];
+    var entry = failedEntries[k];
     var formRowNum = entry.formRowNum;
-    var logRow     = entry.logRow;
+    var logRow = entry.logRow;
 
     if (!formRowNum || formRowNum < 2) {
       Logger.log('reprocessFailed: skipping log row ' + logRow + ' — no form row number stored.');
@@ -178,7 +178,7 @@ function reprocessFailed() {
     }
 
     try {
-      var values  = formSheet.getRange(formRowNum, 1, 1, formSheet.getLastColumn()).getValues()[0];
+      var values = formSheet.getRange(formRowNum, 1, 1, formSheet.getLastColumn()).getValues()[0];
       var article = buildArticleFromResponse(values, headers);
       if (!article || !article.body) { failCount++; continue; }
 
@@ -189,7 +189,7 @@ function reprocessFailed() {
         continue;
       }
 
-      var docTitle  = generated.title || Config.DEFAULT_TITLE || 'Article draft';
+      var docTitle = generated.title || Config.DEFAULT_TITLE || 'Article draft';
       var draftBody = generated.body;
 
       createArticleDoc(docTitle, article.body, ' - Q&A');
