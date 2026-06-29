@@ -5,7 +5,8 @@
 function onOpen() {
   SpreadsheetApp.getActiveSpreadsheet().addMenu('📋 Newsletter Pipeline', [
     { name: '▶ Run Pipeline on Last Response', functionName: 'testWithLastResponse' },
-    { name: '🔄 Reprocess Failed Drafts',      functionName: 'reprocessFailed'       }
+    { name: '🔄 Reprocess Failed Drafts',      functionName: 'reprocessFailed'       },
+    { name: '🧪 Submit Test Form Data',         functionName: 'seedTestData'          }
   ]);
 }
 
