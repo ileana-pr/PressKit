@@ -405,7 +405,22 @@ function onFormSubmit(e) {
 function setupPipeline() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // 1. Create the Google Form
+  // 1. Initialize the Drafts Log on the main (first) sheet FIRST — before linking
+  //    the form. When form.setDestination() runs below, Google appends a new
+  //    "Form Responses 1" tab, so we must claim Sheet1 before that happens.
+  var logSheetName = Config.DRAFT_LOG_SHEET_NAME || 'Drafts Log';
+  var logSheet = ss.getSheetByName(logSheetName);
+  if (!logSheet) {
+    logSheet = ss.getSheets()[0];
+    logSheet.setName(logSheetName);
+    logSheet.appendRow(['Date', 'Draft Title', 'Google Doc Link']);
+    logSheet.getRange(1, 1, 1, 3).setFontWeight('bold');
+    logSheet.setColumnWidth(1, 120);
+    logSheet.setColumnWidth(2, 300);
+    logSheet.setColumnWidth(3, 400);
+  }
+
+  // 2. Create the Google Form
   var form = FormApp.create('Newsletter Submission Form');
   form.setDescription('Want to share your story with the community? We\'d love to feature your news, achievements, or insights in our monthly newsletter!');
 
@@ -450,30 +465,13 @@ function setupPipeline() {
          ])
          .setRequired(true);
 
-  // Link the new Form to this spreadsheet
+  // 3. Link the form — this appends a new "Form Responses 1" tab after the log
   form.setDestination(FormApp.DestinationType.SPREADSHEET, ss.getId());
 
   // Move the Form into the same Drive folder as this spreadsheet
   var ssParents = DriveApp.getFileById(ss.getId()).getParents();
   if (ssParents.hasNext()) {
     DriveApp.getFileById(form.getId()).moveTo(ssParents.next());
-  }
-
-  // 2. Initialize the Drafts Log on the main (first) sheet.
-  // When form.setDestination() runs above, Google creates a new "Form Responses 1"
-  // tab automatically — so the original first sheet stays empty and is the perfect
-  // home for the log. We rename it and write headers there.
-  var logSheetName = Config.DRAFT_LOG_SHEET_NAME || 'Drafts Log';
-  var logSheet = ss.getSheetByName(logSheetName);
-  if (!logSheet) {
-    // Use the first sheet (empty) rather than inserting a new tab
-    logSheet = ss.getSheets()[0];
-    logSheet.setName(logSheetName);
-    logSheet.appendRow(['Date', 'Draft Title', 'Google Doc Link']);
-    logSheet.getRange(1, 1, 1, 3).setFontWeight('bold');
-    logSheet.setColumnWidth(1, 120);
-    logSheet.setColumnWidth(2, 300);
-    logSheet.setColumnWidth(3, 400);
   }
 
   // 3. Programmatically install the On Form Submit trigger
