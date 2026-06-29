@@ -3,6 +3,11 @@
  * Universal template for any organization.
  */
 var Config = {
+  // (Optional) Your organization's name.
+  // When set, Gemini will tailor generated test submissions and article tone to your org.
+  // Leave blank ('') for generic output that works with any organization.
+  ORG_NAME: '',
+
   // Name given to the spreadsheet when setupPipeline() runs
   SPREADSHEET_NAME: 'Newsletter Pipeline',
 
