@@ -64,9 +64,20 @@ function createArticleDoc(title, body, nameSuffix, visualAssetsUrl) {
 
   doc.saveAndClose();
 
+  // Move the doc to the right folder:
+  // Use Config.DRAFT_FOLDER_ID if explicitly set, otherwise default to the
+  // same folder as the spreadsheet so everything stays in one place.
+  var targetFolder;
   if (Config.DRAFT_FOLDER_ID) {
-    var file = DriveApp.getFileById(doc.getId());
-    file.moveTo(DriveApp.getFolderById(Config.DRAFT_FOLDER_ID));
+    targetFolder = DriveApp.getFolderById(Config.DRAFT_FOLDER_ID);
+  } else {
+    var ssParents = DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId()).getParents();
+    if (ssParents.hasNext()) {
+      targetFolder = ssParents.next();
+    }
+  }
+  if (targetFolder) {
+    DriveApp.getFileById(doc.getId()).moveTo(targetFolder);
   }
 
   return doc.getUrl();

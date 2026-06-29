@@ -34,8 +34,9 @@ var Config = {
   // New draft Doc: optional prefix in file name. Date (YYYY-MM-DD) is always prepended.
   DOC_TITLE_PREFIX: '',
 
-  // Folder ID where new draft Google Docs will be created. Leave blank ('') to save in Drive root.
-  // Find the ID in your folder's URL: drive.google.com/drive/folders/YOUR_ID_HERE
+  // Folder ID where new draft Google Docs will be created.
+  // Leave blank ('') to automatically save in the same folder as this spreadsheet.
+  // Set a specific ID to override: drive.google.com/drive/folders/YOUR_ID_HERE
   DRAFT_FOLDER_ID: '',
 
   // Gemini model for content generation.
@@ -115,9 +116,20 @@ function createArticleDoc(title, body, nameSuffix, visualAssetsUrl) {
 
   doc.saveAndClose();
 
+  // Move the doc to the right folder:
+  // Use Config.DRAFT_FOLDER_ID if explicitly set, otherwise default to the
+  // same folder as the spreadsheet so everything stays in one place.
+  var targetFolder;
   if (Config.DRAFT_FOLDER_ID) {
-    var file = DriveApp.getFileById(doc.getId());
-    file.moveTo(DriveApp.getFolderById(Config.DRAFT_FOLDER_ID));
+    targetFolder = DriveApp.getFolderById(Config.DRAFT_FOLDER_ID);
+  } else {
+    var ssParents = DriveApp.getFileById(SpreadsheetApp.getActiveSpreadsheet().getId()).getParents();
+    if (ssParents.hasNext()) {
+      targetFolder = ssParents.next();
+    }
+  }
+  if (targetFolder) {
+    DriveApp.getFileById(doc.getId()).moveTo(targetFolder);
   }
 
   return doc.getUrl();

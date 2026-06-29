@@ -60,7 +60,7 @@ This repository is designed specifically for **vibecoders** and non-technical pe
 2. In Apps Script, click **Project Settings (gear icon)** ➔ **Script Properties** ➔ **Add script property**.
 3. Set the property name to `GEMINI_API_KEY` and paste your key as the value. Save.
 
-> **Optional:** To save draft Docs to a specific Drive folder, edit the `DRAFT_FOLDER_ID` value near the top of the bundle (find the ID in your folder's URL: `drive.google.com/drive/folders/YOUR_ID_HERE`).
+> **Optional:** By default, all draft Docs are saved in the same Drive folder as your spreadsheet. To save them somewhere else, edit the `DRAFT_FOLDER_ID` value near the top of the bundle with your target folder's ID (found in its URL: `drive.google.com/drive/folders/YOUR_ID_HERE`).
 
 ---
 
